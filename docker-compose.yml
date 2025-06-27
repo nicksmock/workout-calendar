@@ -1,0 +1,26 @@
+services:
+  workout-calendar:
+    build: .
+    container_name: olympic-workout-calendar
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+    volumes:
+      # Optional: Mount a volume for workout data persistence
+      - workout_data:/app/data
+    environment:
+      - NODE_ENV=production
+    labels:
+      - "com.unraid.docker.managed=dockerman"
+      - "com.unraid.docker.webui=http://[IP]:[PORT:8080]"
+      - "com.unraid.docker.icon=https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/calendar.svg"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  workout_data:
+    driver: local
