@@ -3,7 +3,7 @@ services:
     build: .
     container_name: olympic-workout-calendar
     ports:
-      - "8080:80"
+      - "8680:80"
     restart: unless-stopped
     volumes:
       # Optional: Mount a volume for workout data persistence
