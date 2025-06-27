@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   workout-calendar:
     build: .
@@ -5,6 +7,8 @@ services:
     ports:
       - "8680:80"
     restart: unless-stopped
+    networks:
+      - olympia
     volumes:
       # Optional: Mount a volume for workout data persistence
       - workout_data:/app/data
@@ -12,8 +16,8 @@ services:
       - NODE_ENV=production
     labels:
       - "com.unraid.docker.managed=dockerman"
-      - "com.unraid.docker.webui=http://[IP]:[PORT:8080]"
-      - "com.unraid.docker.icon=https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/svg/calendar.svg"
+      - "com.unraid.docker.webui=http://[IP]:[PORT:8680]"
+      - "com.unraid.docker.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/synology-calendar.webp"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
       interval: 30s
@@ -24,3 +28,7 @@ services:
 volumes:
   workout_data:
     driver: local
+
+networks:
+  olympia:
+    external: true
