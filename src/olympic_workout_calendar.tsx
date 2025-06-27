@@ -43,7 +43,7 @@ const EditForm = ({ dayData, workout, onSave, onCancel }) => {
         <span style={{ color: '#f8f8f2' }}>Workout Completed</span>
       </label>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: '#f8f8f2' }}>Sleep Quality (1-10)</label>
           <input 
@@ -71,7 +71,7 @@ const EditForm = ({ dayData, workout, onSave, onCancel }) => {
       </div>
 
       {workout !== 'Rest' && (
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1" style={{ color: '#f8f8f2' }}>Push-ups Completed</label>
             <input 
@@ -95,7 +95,7 @@ const EditForm = ({ dayData, workout, onSave, onCancel }) => {
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1" style={{ color: '#f8f8f2' }}>Weight Used</label>
           <input 
@@ -408,7 +408,7 @@ const OlympicWorkoutCalendar = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {dayNames.map((dayName, index) => {
             const workoutType = weekData.workouts[index];
             const workout = workoutDetails[workoutType];
@@ -418,7 +418,7 @@ const OlympicWorkoutCalendar = () => {
             return (
               <div 
                 key={index}
-                className="p-3 rounded-lg cursor-pointer transition-all hover:opacity-80"
+                className="p-2 sm:p-3 rounded-lg cursor-pointer transition-all hover:opacity-80 min-h-[80px] sm:min-h-[100px]"
                 style={{ 
                   backgroundColor: workout.color,
                   border: isCompleted ? '2px solid #ffb86c' : 'none',
@@ -426,9 +426,9 @@ const OlympicWorkoutCalendar = () => {
                 }}
                 onClick={() => setSelectedDay({ week: currentWeek, day: index, workout: workoutType })}
               >
-                <div className="text-sm font-semibold">{dayName}</div>
-                <div className="text-xs mt-1">{workout.name}</div>
-                <div className="text-xs mt-1">{workout.duration}</div>
+                <div className="text-xs sm:text-sm font-semibold">{dayName}</div>
+                <div className="text-xs mt-1 break-words">{workout.name}</div>
+                <div className="text-xs mt-1 hidden sm:block">{workout.duration}</div>
                 {isCompleted && <div className="text-xs mt-1">✓ Done</div>}
               </div>
             );
@@ -572,7 +572,7 @@ const OlympicWorkoutCalendar = () => {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-medium" style={{ color: '#f8f8f2' }}>Status:</span> 
                 <span className={dayData.completed ? 'ml-2' : 'ml-2'} style={{ color: dayData.completed ? '#50fa7b' : '#6272a4' }}>
@@ -594,7 +594,7 @@ const OlympicWorkoutCalendar = () => {
             </div>
 
             {workout !== 'Rest' && (
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium" style={{ color: '#f8f8f2' }}>Push-ups:</span> 
                   <span className="ml-2" style={{ color: '#bd93f9' }}>{dayData.pushups || 'Not recorded'}</span>
@@ -619,21 +619,21 @@ const OlympicWorkoutCalendar = () => {
   };
 
   return (
-    <div className="min-h-screen p-4" style={{ backgroundColor: '#282a36' }}>
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2 flex items-center justify-center" style={{ color: '#f8f8f2' }}>
-            <Trophy className="w-8 h-8 mr-3" style={{ color: '#ffb86c' }} />
-            Olympic Home Workout Calendar
+    <div className="min-h-screen p-2 sm:p-4" style={{ backgroundColor: '#282a36' }}>
+      <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center justify-center flex-wrap" style={{ color: '#f8f8f2' }}>
+            <Trophy className="w-6 h-6 sm:w-8 sm:h-8 mr-2 sm:mr-3" style={{ color: '#ffb86c' }} />
+            <span className="break-words">Olympic Home Workout Calendar</span>
           </h1>
-          <p style={{ color: '#6272a4' }}>Track your 12-week transformation journey</p>
+          <p className="text-sm sm:text-base" style={{ color: '#6272a4' }}>Track your 12-week transformation journey</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          <div className="xl:col-span-2 w-full">
             {renderWeekView()}
           </div>
-          <div className="lg:col-span-1">
+          <div className="xl:col-span-1 w-full">
             {selectedDay ? (
               renderDayDetail()
             ) : (
@@ -646,12 +646,12 @@ const OlympicWorkoutCalendar = () => {
         </div>
 
         {/* Quick Stats Overview */}
-        <div className="mt-8 rounded-lg shadow-lg p-6" style={{ backgroundColor: '#44475a' }}>
-          <h3 className="font-bold mb-4 flex items-center" style={{ color: '#f8f8f2' }}>
+        <div className="mt-4 sm:mt-8 rounded-lg shadow-lg p-4 sm:p-6" style={{ backgroundColor: '#44475a' }}>
+          <h3 className="font-bold mb-4 flex items-center flex-wrap" style={{ color: '#f8f8f2' }}>
             <TrendingUp className="w-5 h-5 mr-2" style={{ color: '#8be9fd' }} />
-            Overall Progress
+            <span>Overall Progress</span>
           </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-center">
             {(() => {
               const stats = calculateStats(12); // Overall stats
               return (
