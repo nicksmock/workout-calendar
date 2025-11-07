@@ -320,9 +320,999 @@ macOS Integration:
 
 ---
 
-## 5. Database Migration
+## 5. Detailed Database Schema
 
-### 5.1 PostgreSQL to SQLite Conversion
+### 5.1 Complete Table Definitions (SQLite)
+
+This section provides the complete database schema that the Electron app will use. All tables have been adapted from PostgreSQL to SQLite-compatible syntax.
+
+#### Table 1: users
+```sql
+CREATE TABLE users (
+    id TEXT PRIMARY KEY,  -- UUID stored as TEXT
+    username TEXT UNIQUE NOT NULL,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    full_name TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,  -- ISO 8601 format
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_login TEXT,
+    is_active INTEGER DEFAULT 1  -- 1 = true, 0 = false
+);
+
+CREATE INDEX idx_users_username ON users(username);
+CREATE INDEX idx_users_email ON users(email);
+```
+
+**Purpose:** Store user account information. For personal use, only one user record needed.
+
+**Key Fields:**
+- `id`: UUID as TEXT (e.g., "550e8400-e29b-41d4-a716-446655440000")
+- `is_active`: INTEGER (1 or 0 instead of BOOLEAN)
+- Timestamps as TEXT in ISO 8601 format: "2025-11-07T10:30:00Z"
+
+---
+
+#### Table 2: exercises
+```sql
+CREATE TABLE exercises (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    category TEXT,  -- 'strength', 'cardio', 'mobility', 'core'
+    equipment TEXT,  -- 'kettlebell', 'bodyweight', 'dumbbells'
+    muscle_groups TEXT,  -- JSON array string: '["chest","triceps"]'
+    video_url TEXT,  -- YouTube URL
+    video_embed_code TEXT,  -- iframe embed code
+    instructions TEXT,
+    difficulty_level TEXT,  -- 'beginner', 'intermediate', 'advanced'
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_exercises_name ON exercises(name);
+CREATE INDEX idx_exercises_category ON exercises(category);
+CREATE INDEX idx_exercises_difficulty ON exercises(difficulty_level);
+```
+
+**Purpose:** Exercise library with video links and instructions.
+
+**Example Row:**
+```json
+{
+  "id": "ex-001",
+  "name": "Goblet Squats",
+  "category": "strength",
+  "equipment": "kettlebell",
+  "muscle_groups": "[\"quads\",\"glutes\",\"core\"]",
+  "video_url": "https://www.youtube.com/watch?v=MeIiIdhvXT4",
+  "difficulty_level": "beginner"
+}
+```
+
+---
+
+#### Table 3: workout_templates
+```sql
+CREATE TABLE workout_templates (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    workout_type TEXT,  -- 'A', 'B', 'Power', 'Metabolic', 'High', etc.
+    phase TEXT,  -- 'Foundation', 'Building', 'Athletic Performance'
+    week_number INTEGER,
+    duration_minutes INTEGER,
+    warm_up TEXT,  -- JSON array of warmup exercises
+    cool_down TEXT,  -- JSON array of cooldown exercises
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_workout_templates_type ON workout_templates(workout_type);
+CREATE INDEX idx_workout_templates_phase ON workout_templates(phase);
+CREATE INDEX idx_workout_templates_week ON workout_templates(week_number);
+```
+
+**Purpose:** Pre-defined workout programs (Foundation A/B, Power, Metabolic, etc.)
+
+**Example Row:**
+```json
+{
+  "id": "wt-foundation-a",
+  "name": "Strength Foundation",
+  "workout_type": "A",
+  "phase": "Foundation",
+  "duration_minutes": 20,
+  "warm_up": "[\"Arm circles: 10 each direction\",\"Leg swings: 10 each leg\"]"
+}
+```
+
+---
+
+#### Table 4: workout_template_exercises
+```sql
+CREATE TABLE workout_template_exercises (
+    id TEXT PRIMARY KEY,
+    workout_template_id TEXT NOT NULL REFERENCES workout_templates(id) ON DELETE CASCADE,
+    exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    order_index INTEGER NOT NULL,  -- Order in workout (1, 2, 3, ...)
+    sets INTEGER,
+    reps TEXT,  -- "10-12" or "AMRAP" or "30 seconds"
+    rest_seconds INTEGER,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_wt_exercises_template ON workout_template_exercises(workout_template_id);
+CREATE INDEX idx_wt_exercises_exercise ON workout_template_exercises(exercise_id);
+```
+
+**Purpose:** Many-to-many relationship between templates and exercises.
+
+---
+
+#### Table 5: workout_sessions
+```sql
+CREATE TABLE workout_sessions (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    workout_template_id TEXT REFERENCES workout_templates(id) ON DELETE SET NULL,
+    scheduled_date TEXT,  -- DATE format: "2025-11-07"
+    completed_date TEXT,  -- TIMESTAMP: "2025-11-07T10:30:00Z"
+    duration_minutes INTEGER,
+    is_completed INTEGER DEFAULT 0,
+    week_number INTEGER,
+    day_number INTEGER,  -- 1-7 (Mon-Sun)
+
+    -- Subjective metrics (1-10 scale)
+    sleep_quality INTEGER CHECK (sleep_quality >= 1 AND sleep_quality <= 10),
+    energy_level INTEGER CHECK (energy_level >= 1 AND energy_level <= 10),
+    soreness_level INTEGER CHECK (soreness_level >= 1 AND soreness_level <= 10),
+
+    -- Notes and feedback
+    notes TEXT,
+    overall_rating INTEGER CHECK (overall_rating >= 1 AND overall_rating <= 5),
+
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_workout_sessions_user ON workout_sessions(user_id);
+CREATE INDEX idx_workout_sessions_date ON workout_sessions(scheduled_date);
+CREATE INDEX idx_workout_sessions_completed ON workout_sessions(is_completed);
+CREATE INDEX idx_workout_sessions_week ON workout_sessions(week_number);
+```
+
+**Purpose:** Actual workout sessions (logged or scheduled).
+
+**Example Row (Completed Workout):**
+```json
+{
+  "id": "ws-20251107-001",
+  "user_id": "user-001",
+  "workout_template_id": "wt-foundation-a",
+  "scheduled_date": "2025-11-07",
+  "completed_date": "2025-11-07T10:30:00Z",
+  "duration_minutes": 22,
+  "is_completed": 1,
+  "week_number": 1,
+  "day_number": 1,
+  "sleep_quality": 7,
+  "energy_level": 8,
+  "soreness_level": 3,
+  "notes": "Felt strong today, increased KB weight",
+  "overall_rating": 5
+}
+```
+
+---
+
+#### Table 6: exercise_logs
+```sql
+CREATE TABLE exercise_logs (
+    id TEXT PRIMARY KEY,
+    workout_session_id TEXT NOT NULL REFERENCES workout_sessions(id) ON DELETE CASCADE,
+    exercise_id TEXT NOT NULL REFERENCES exercises(id) ON DELETE CASCADE,
+    order_index INTEGER NOT NULL,
+    set_number INTEGER NOT NULL,
+    reps INTEGER,
+    weight_lbs REAL,  -- DECIMAL → REAL in SQLite
+    duration_seconds INTEGER,  -- For timed exercises (planks, holds)
+    distance_meters REAL,  -- For cardio exercises
+    rpe INTEGER CHECK (rpe >= 1 AND rpe <= 10),  -- Rate of Perceived Exertion
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_exercise_logs_session ON exercise_logs(workout_session_id);
+CREATE INDEX idx_exercise_logs_exercise ON exercise_logs(exercise_id);
+CREATE INDEX idx_exercise_logs_set ON exercise_logs(set_number);
+```
+
+**Purpose:** Detailed set-by-set tracking for each exercise in a session.
+
+**Example Rows (3 sets of squats):**
+```json
+[
+  {
+    "id": "el-001",
+    "workout_session_id": "ws-20251107-001",
+    "exercise_id": "ex-goblet-squat",
+    "set_number": 1,
+    "reps": 12,
+    "weight_lbs": 35.0,
+    "rpe": 7
+  },
+  {
+    "id": "el-002",
+    "workout_session_id": "ws-20251107-001",
+    "exercise_id": "ex-goblet-squat",
+    "set_number": 2,
+    "reps": 10,
+    "weight_lbs": 35.0,
+    "rpe": 8
+  },
+  {
+    "id": "el-003",
+    "workout_session_id": "ws-20251107-001",
+    "exercise_id": "ex-goblet-squat",
+    "set_number": 3,
+    "reps": 8,
+    "weight_lbs": 35.0,
+    "rpe": 9
+  }
+]
+```
+
+---
+
+#### Table 7: progress_measurements
+```sql
+CREATE TABLE progress_measurements (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    measurement_date TEXT NOT NULL,  -- DATE: "2025-11-07"
+    body_weight_lbs REAL,
+    body_fat_percentage REAL,
+
+    -- Body measurements in inches
+    chest_inches REAL,
+    waist_inches REAL,
+    hips_inches REAL,
+    arms_inches REAL,
+    thighs_inches REAL,
+
+    -- Progress photos (file paths)
+    front_photo_url TEXT,
+    side_photo_url TEXT,
+    back_photo_url TEXT,
+
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_progress_measurements_user ON progress_measurements(user_id);
+CREATE INDEX idx_progress_measurements_date ON progress_measurements(measurement_date);
+```
+
+**Purpose:** Track body measurements and progress photos over time.
+
+---
+
+#### Table 8: user_goals
+```sql
+CREATE TABLE user_goals (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    goal_type TEXT NOT NULL,  -- 'weight_loss', 'strength_gain', 'endurance'
+    target_value REAL,
+    current_value REAL,
+    unit TEXT,  -- 'lbs', 'kg', 'reps', 'minutes'
+    target_date TEXT,  -- DATE
+    is_achieved INTEGER DEFAULT 0,
+    achieved_date TEXT,
+    notes TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_user_goals_user ON user_goals(user_id);
+CREATE INDEX idx_user_goals_achieved ON user_goals(is_achieved);
+```
+
+**Purpose:** User goal setting and tracking.
+
+---
+
+#### Table 9: user_preferences
+```sql
+CREATE TABLE user_preferences (
+    user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    theme TEXT DEFAULT 'dark',  -- 'light', 'dark', 'auto'
+    notifications_enabled INTEGER DEFAULT 1,
+    email_notifications INTEGER DEFAULT 0,
+    weight_unit TEXT DEFAULT 'lbs',  -- 'lbs' or 'kg'
+    distance_unit TEXT DEFAULT 'miles',  -- 'miles' or 'km'
+    timezone TEXT DEFAULT 'UTC',
+    language TEXT DEFAULT 'en',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+**Purpose:** User application preferences.
+
+---
+
+### 5.2 Database Views (Optional - for complex queries)
+
+```sql
+-- View: Recent workouts summary
+CREATE VIEW recent_workouts_view AS
+SELECT
+    ws.id AS session_id,
+    ws.scheduled_date,
+    ws.completed_date,
+    ws.is_completed,
+    wt.name AS workout_name,
+    wt.workout_type,
+    wt.phase,
+    ws.duration_minutes,
+    ws.sleep_quality,
+    ws.energy_level,
+    ws.overall_rating,
+    COUNT(DISTINCT el.exercise_id) AS exercises_count
+FROM workout_sessions ws
+LEFT JOIN workout_templates wt ON ws.workout_template_id = wt.id
+LEFT JOIN exercise_logs el ON ws.id = el.workout_session_id
+GROUP BY ws.id
+ORDER BY ws.scheduled_date DESC;
+```
+
+---
+
+## 6. Complete Workout Program Structure
+
+### 6.1 12-Week Program Overview
+
+**Phase 1: Foundation (Weeks 1-4)**
+- Focus: Build movement patterns, establish routine
+- Frequency: 3x/week (Mon/Wed/Fri or similar)
+- Workouts: Foundation A & B (alternating)
+- Duration: 15-20 minutes per session
+- Assessment: Week 4, Day 6
+
+**Phase 2: Building (Weeks 5-8)**
+- Focus: Increase intensity, add variety
+- Frequency: 4-5x/week
+- Workouts: Power, Metabolic, Recovery
+- Duration: 20-25 minutes per session
+- Assessment: Week 8, Day 6
+
+**Phase 3: Athletic Performance (Weeks 9-12)**
+- Focus: Peak performance, high intensity
+- Frequency: 5-6x/week
+- Workouts: High Intensity, Moderate, Assessment
+- Duration: 25-30 minutes per session
+- Final Assessment: Week 12, Day 5
+- Celebration: Week 12, Day 6
+
+### 6.2 Weekly Workout Schedule
+
+```javascript
+// Week-by-week workout assignment
+const PROGRAM_STRUCTURE = {
+  // Phase 1: Foundation (Weeks 1-4)
+  1: { phase: 'Foundation', workouts: ['A', 'Rest', 'B', 'Rest', 'A', 'Rest', 'Rest'] },
+  2: { phase: 'Foundation', workouts: ['B', 'Rest', 'A', 'Rest', 'B', 'Rest', 'Rest'] },
+  3: { phase: 'Foundation', workouts: ['A', 'Rest', 'B', 'Rest', 'A', 'Rest', 'Rest'] },
+  4: { phase: 'Foundation', workouts: ['B', 'Rest', 'A', 'Rest', 'B', 'Assessment', 'Rest'] },
+
+  // Phase 2: Building (Weeks 5-8)
+  5: { phase: 'Building', workouts: ['Power', 'Rest', 'Metabolic', 'Rest', 'Power', 'Recovery', 'Rest'] },
+  6: { phase: 'Building', workouts: ['Metabolic', 'Rest', 'Power', 'Rest', 'Metabolic', 'Recovery', 'Rest'] },
+  7: { phase: 'Building', workouts: ['Power', 'Rest', 'Metabolic', 'Recovery', 'Power', 'Rest', 'Rest'] },
+  8: { phase: 'Building', workouts: ['Metabolic', 'Rest', 'Power', 'Rest', 'Metabolic', 'Assessment', 'Rest'] },
+
+  // Phase 3: Athletic Performance (Weeks 9-12)
+  9: { phase: 'Athletic Performance', workouts: ['High', 'Rest', 'Moderate', 'Rest', 'High', 'Moderate', 'Rest'] },
+  10: { phase: 'Athletic Performance', workouts: ['High', 'Rest', 'Moderate', 'Rest', 'High', 'Moderate', 'Rest'] },
+  11: { phase: 'Athletic Performance', workouts: ['High', 'Moderate', 'Rest', 'High', 'Rest', 'Moderate', 'Rest'] },
+  12: { phase: 'Athletic Performance', workouts: ['High', 'Rest', 'Moderate', 'Rest', 'Assessment', 'Celebration', 'Rest'] }
+};
+```
+
+### 6.3 Workout Type Details
+
+#### Foundation A - "Strength Foundation"
+- **Duration:** 15-20 minutes
+- **Equipment:** Kettlebell (light to moderate)
+- **Warmup:** Arm circles, leg swings, bodyweight squats, cat-cow stretches
+- **Exercises:**
+  1. Goblet Squats - 3 sets of 8-12 reps
+  2. Push-ups (modified as needed) - 3 sets of 5-10 reps
+  3. Single-arm KB Row - 3 sets of 8 each arm
+  4. Plank Hold - 3 sets of 15-30 seconds
+  5. Glute Bridges - 2 sets of 12-15 reps
+- **Cooldown:** Hip flexor stretch, seated spinal twist, deep breathing
+- **Video:** All exercises have YouTube links for demonstrations
+
+#### Foundation B - "Movement & Mobility"
+- **Duration:** 15-20 minutes
+- **Equipment:** Kettlebell, resistance band
+- **Exercises:**
+  1. KB Deadlifts - 3 sets of 8-10 reps
+  2. Band Pull-aparts - 3 sets of 12-15 reps
+  3. Reverse Lunges - 2 sets of 6 each leg
+  4. KB Overhead Hold - 3 sets of 20-30 seconds each arm
+  5. Bird Dogs - 2 sets of 8 each side
+
+#### Power - "Power & Strength"
+- **Duration:** 20-25 minutes
+- **Exercises:**
+  1. KB Swings - 4 sets of 15-20 reps
+  2. Push-up to T - 3 sets of 6-8 each side
+  3. Goblet Squats - 4 sets of 10-15 reps
+  4. Single-arm KB Press - 3 sets of 6-8 each arm
+  5. Renegade Rows - 3 sets of 6 each arm
+  6. Wall Sit - 3 sets of 30-45 seconds
+
+#### Metabolic - "Metabolic Circuit"
+- **Duration:** 20-25 minutes
+- **Format:** 3 rounds, 45 seconds work / 15 seconds rest
+- **Circuit:**
+  1. KB Swings
+  2. Push-ups
+  3. Reverse Lunges (alternating)
+  4. Band Rows
+  5. Plank Hold
+  6. Glute Bridges
+  7. Rest 2 minutes between rounds
+
+#### Recovery - "Recovery & Mobility"
+- **Duration:** 15-20 minutes
+- **Focus:** Active recovery, flexibility
+- **Exercises:**
+  1. Gentle yoga flow
+  2. Foam rolling (if available)
+  3. Breathing exercises
+  4. Light stretching
+
+#### High Intensity Day
+- **Duration:** 25-30 minutes
+- **Components:**
+  1. Power Circuit - 4 rounds, 40 sec work / 20 sec rest
+  2. Strength Superset - 3 sets compound movements
+  3. Finisher - 2 minutes high-intensity
+
+#### Moderate Day
+- **Duration:** 20-25 minutes
+- **Focus:** Longer holds, tempo work, skill development, movement quality
+
+#### Assessment Day
+- **Duration:** 20-30 minutes
+- **Tests:**
+  1. Push-ups test - Maximum reps
+  2. Plank hold test - Maximum time
+  3. Strength measurements
+  4. Progress photos
+  5. Record improvements vs baseline
+
+#### Celebration Recovery
+- **Duration:** 20 minutes
+- **Focus:** Gentle mobility, reflection, program completion celebration
+
+---
+
+## 7. Complete API Specification
+
+### 7.1 Base URL & Authentication
+
+**Local Base URL:** `http://localhost:3001/api` (when using HTTP approach)
+
+**Authentication:** Simple header-based for single user
+```
+X-User-ID: user-001
+```
+
+**Response Format:** All responses return JSON with camelCase keys (converted from snake_case database)
+
+---
+
+### 7.2 Workout Endpoints
+
+#### GET /api/workouts/templates
+**Description:** Get all workout templates
+
+**Response:**
+```json
+[
+  {
+    "id": "wt-foundation-a",
+    "name": "Strength Foundation",
+    "workoutType": "A",
+    "phase": "Foundation",
+    "durationMinutes": 20,
+    "warmUp": "[\"Arm circles\",\"Leg swings\"]",
+    "coolDown": "[\"Hip flexor stretch\"]"
+  }
+]
+```
+
+---
+
+#### GET /api/workouts/templates/:id
+**Description:** Get specific workout template with exercises
+
+**Response:**
+```json
+{
+  "id": "wt-foundation-a",
+  "name": "Strength Foundation",
+  "exercises": [
+    {
+      "id": "ex-goblet-squat",
+      "name": "Goblet Squats",
+      "sets": 3,
+      "reps": "8-12",
+      "videoUrl": "https://www.youtube.com/watch?v=...",
+      "orderIndex": 1
+    }
+  ]
+}
+```
+
+---
+
+#### GET /api/workouts/exercises
+**Description:** Get all exercises in library
+
+**Response:**
+```json
+[
+  {
+    "id": "ex-001",
+    "name": "Goblet Squats",
+    "category": "strength",
+    "equipment": "kettlebell",
+    "videoUrl": "https://www.youtube.com/watch?v=MeIiIdhvXT4",
+    "difficultyLevel": "beginner"
+  }
+]
+```
+
+---
+
+#### GET /api/workouts/sessions
+**Description:** Get all workout sessions for user
+
+**Query Params:**
+- `weekNumber`: Filter by week (1-12)
+- `isCompleted`: Filter by completion status (true/false)
+- `limit`: Pagination limit
+- `offset`: Pagination offset
+
+**Response:**
+```json
+[
+  {
+    "id": "ws-001",
+    "workoutTemplateId": "wt-foundation-a",
+    "scheduledDate": "2025-11-07",
+    "completedDate": "2025-11-07T10:30:00Z",
+    "isCompleted": true,
+    "weekNumber": 1,
+    "dayNumber": 1,
+    "sleepQuality": 7,
+    "energyLevel": 8,
+    "notes": "Felt strong today",
+    "overallRating": 5
+  }
+]
+```
+
+---
+
+#### GET /api/workouts/sessions/:id
+**Description:** Get specific workout session with exercise logs
+
+**Response:**
+```json
+{
+  "id": "ws-001",
+  "workoutTemplate": {
+    "name": "Strength Foundation",
+    "workoutType": "A"
+  },
+  "exerciseLogs": [
+    {
+      "exerciseId": "ex-goblet-squat",
+      "exerciseName": "Goblet Squats",
+      "setNumber": 1,
+      "reps": 12,
+      "weightLbs": 35.0,
+      "rpe": 7
+    }
+  ],
+  "sleepQuality": 7,
+  "energyLevel": 8,
+  "notes": "Felt strong today"
+}
+```
+
+---
+
+#### POST /api/workouts/sessions
+**Description:** Create new workout session (log or schedule)
+
+**Request Body:**
+```json
+{
+  "workoutTemplateId": "wt-foundation-a",
+  "scheduledDate": "2025-11-07",
+  "weekNumber": 1,
+  "dayNumber": 1,
+  "isCompleted": true,
+  "completedDate": "2025-11-07T10:30:00Z",
+  "durationMinutes": 22,
+  "sleepQuality": 7,
+  "energyLevel": 8,
+  "sorenessLevel": 3,
+  "notes": "First workout of the program!",
+  "overallRating": 5
+}
+```
+
+**Response:**
+```json
+{
+  "id": "ws-new-001",
+  "...": "all fields from request"
+}
+```
+
+---
+
+#### PUT /api/workouts/sessions/:id
+**Description:** Update existing workout session
+
+**Request Body:** Same as POST (partial updates allowed)
+
+---
+
+#### DELETE /api/workouts/sessions/:id
+**Description:** Delete workout session
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Workout session deleted"
+}
+```
+
+---
+
+#### POST /api/workouts/sessions/:sessionId/exercises
+**Description:** Log exercise sets for a workout session
+
+**Request Body:**
+```json
+{
+  "exerciseId": "ex-goblet-squat",
+  "orderIndex": 1,
+  "sets": [
+    { "setNumber": 1, "reps": 12, "weightLbs": 35.0, "rpe": 7 },
+    { "setNumber": 2, "reps": 10, "weightLbs": 35.0, "rpe": 8 },
+    { "setNumber": 3, "reps": 8, "weightLbs": 35.0, "rpe": 9 }
+  ]
+}
+```
+
+---
+
+### 7.3 Progress Endpoints
+
+#### GET /api/progress/stats
+**Description:** Get overall user statistics
+
+**Response:**
+```json
+{
+  "totalWorkouts": 45,
+  "completedWorkouts": 42,
+  "avgSleepQuality": 7.2,
+  "avgEnergyLevel": 7.8,
+  "avgWorkoutRating": 4.5,
+  "lastWorkoutDate": "2025-11-07",
+  "currentWeek": 6,
+  "completionRate": 93.3
+}
+```
+
+---
+
+#### GET /api/progress/weekly
+**Description:** Get weekly completion summary (all 12 weeks)
+
+**Response:**
+```json
+[
+  { "weekNumber": 1, "completedWorkouts": 3, "scheduledWorkouts": 3, "completionRate": 100 },
+  { "weekNumber": 2, "completedWorkouts": 2, "scheduledWorkouts": 3, "completionRate": 66.7 },
+  ...
+]
+```
+
+---
+
+#### GET /api/progress/records
+**Description:** Get personal records (max push-ups, longest plank, etc.)
+
+**Response:**
+```json
+{
+  "maxPushups": {
+    "value": 42,
+    "date": "2025-11-07",
+    "weekNumber": 4
+  },
+  "longestPlank": {
+    "value": 90,
+    "unit": "seconds",
+    "date": "2025-11-07",
+    "weekNumber": 8
+  }
+}
+```
+
+---
+
+#### GET /api/progress/exercises/:exerciseId
+**Description:** Get progress over time for specific exercise
+
+**Response:**
+```json
+[
+  {
+    "date": "2025-11-01",
+    "weekNumber": 1,
+    "maxWeight": 35.0,
+    "totalReps": 30,
+    "avgRpe": 7.3
+  },
+  {
+    "date": "2025-11-03",
+    "weekNumber": 1,
+    "maxWeight": 40.0,
+    "totalReps": 32,
+    "avgRpe": 7.8
+  }
+]
+```
+
+---
+
+## 8. Feature Workflows & UI Requirements
+
+### 8.1 Calendar View Workflow
+
+**User Story:** View 12-week program at a glance, navigate weeks, see workout completion status
+
+**UI Components:**
+1. **Week Selector**
+   - Dropdown or horizontal scroll
+   - Shows: "Week 1: Foundation" to "Week 12: Athletic Performance"
+   - Highlight current week
+
+2. **Week View Grid**
+   - 7 columns (Mon-Sun)
+   - Each day shows:
+     - Day name
+     - Workout name (or "Rest")
+     - Completion indicator (✓ green border if completed)
+     - Duration (if completed)
+     - Click to open details
+
+3. **Workout Day Card**
+   - Display: Workout name, duration, exercises count
+   - Border color matches workout type
+   - Opacity reduced if not completed
+
+**User Actions:**
+- Click week to navigate
+- Click workout card → Opens Workout Details modal
+- Click "Log Workout" → Opens Workout Edit Form
+
+---
+
+### 8.2 Workout Details Modal
+
+**Triggered:** Click workout card from calendar
+
+**Modal Content:**
+1. **Header**
+   - Workout name (e.g., "Strength Foundation")
+   - Phase badge (Foundation/Building/Athletic Performance)
+   - Duration
+   - Date
+
+2. **Workout Stats** (if completed)
+   - Sleep quality: 7/10
+   - Energy level: 8/10
+   - Overall rating: 5 stars
+   - Notes display
+
+3. **Exercise List**
+   - Each exercise shows:
+     - Exercise name
+     - Sets × Reps (e.g., "3 × 8-12")
+     - Video thumbnail/link
+     - Click exercise name → Play video in modal
+
+4. **Exercise Logs** (if completed)
+   - Set-by-set breakdown:
+     - Set 1: 12 reps @ 35 lbs (RPE 7)
+     - Set 2: 10 reps @ 35 lbs (RPE 8)
+     - Set 3: 8 reps @ 35 lbs (RPE 9)
+
+5. **Action Buttons**
+   - "Log Workout" (if not completed)
+   - "Edit Workout" (if completed)
+   - "Delete" (with confirmation)
+   - "Close"
+
+---
+
+### 8.3 Log Workout Flow
+
+**Triggered:** Click "Log Workout" button
+
+**Form Fields:**
+1. **Completion Status**
+   - Radio buttons: Complete / Partial / Skip
+   - If "Skip", only show notes field
+
+2. **Subjective Metrics** (if Complete or Partial)
+   - Sleep quality: Slider 1-10
+   - Energy level: Slider 1-10
+   - Soreness level: Slider 1-10 (optional)
+
+3. **Workout Stats** (if Complete)
+   - Duration: Number input (minutes)
+   - Overall rating: 1-5 stars
+
+4. **Personal Records** (if applicable)
+   - Push-ups (max reps): Number input
+   - Plank hold (seconds): Number input
+
+5. **Notes**
+   - Text area for freeform notes
+
+6. **Action Buttons**
+   - "Save" → Creates/updates workout session
+   - "Cancel" → Close without saving
+
+**Validation:**
+- Sleep quality, energy level must be 1-10
+- Duration must be positive integer
+- On save, show success toast notification
+
+---
+
+### 8.4 Progress Dashboard
+
+**Tabs:** Overview | Weekly | Sleep & Energy | Personal Records
+
+#### Tab 1: Overview
+**Top Row Cards:**
+- Total Workouts: 45
+- Completion Rate: 93%
+- Avg Sleep: 7.2/10
+- Avg Energy: 7.8/10
+
+**Charts:**
+- Weekly Completion (Bar Chart)
+  - X-axis: Weeks 1-12
+  - Y-axis: Completed workouts count
+  - Color gradient by phase
+
+#### Tab 2: Weekly Breakdown
+- List view of all 12 weeks
+- Each week shows:
+  - Completed: 3/3 workouts
+  - Progress bar
+  - Click to jump to calendar week view
+
+#### Tab 3: Sleep & Energy Trends
+- Area chart with two lines:
+  - Blue line: Sleep quality over time
+  - Green line: Energy level over time
+- X-axis: Workout date
+- Y-axis: 1-10 scale
+- Tooltips show exact values
+
+#### Tab 4: Personal Records
+**Cards showing:**
+- Max Push-ups: 42 (Week 4)
+- Longest Plank: 90 seconds (Week 8)
+- Heaviest Goblet Squat: 50 lbs (Week 10)
+
+---
+
+### 8.5 Workout History
+
+**Search & Filter:**
+- Search bar: Search by workout name or notes
+- Filter dropdown:
+  - All workouts
+  - Completed only
+  - Planned only
+  - By phase (Foundation/Building/Athletic)
+
+**Workout Cards (List View):**
+- Each card shows:
+  - Date
+  - Workout name
+  - Week X, Day Y
+  - Duration
+  - Sleep, Energy indicators
+  - Rating stars
+  - Snippet of notes
+  - Click → Opens Workout Details modal
+
+**Pagination:**
+- Show 20 workouts per page
+- Infinite scroll or "Load More" button
+
+---
+
+### 8.6 Video Player Modal
+
+**Triggered:** Click exercise video link
+
+**Modal Content:**
+- YouTube iframe embed (autoplay enabled)
+- Exercise name header
+- Sets × Reps info
+- "Close" button
+
+**Implementation:**
+```html
+<iframe
+  width="560"
+  height="315"
+  src="https://www.youtube.com/embed/VIDEO_ID?autoplay=1"
+  frameborder="0"
+  allowfullscreen>
+</iframe>
+```
+
+---
+
+### 8.7 Data Export
+
+**Menu:** File → Export Data
+
+**Export Options:**
+1. **Full Backup (JSON)**
+   - All tables exported as JSON
+   - Filename: `olympic-workout-backup-2025-11-07.json`
+
+2. **Workout History (CSV)**
+   - Columns: Date, Week, Day, Workout, Duration, Sleep, Energy, Rating, Notes
+   - Filename: `workout-history-2025-11-07.csv`
+
+**Native File Picker:**
+- Use Electron dialog to choose save location
+- Default: ~/Documents/Olympic Workout Backups/
+
+---
+
+## 9. PostgreSQL to SQLite Migration
+
+### 9.1 Type Conversions
 
 #### Changes Required
 
