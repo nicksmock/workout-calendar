@@ -51,7 +51,7 @@ if (process.env.NODE_ENV === 'development') {
 // ============================================================================
 
 // Health check endpoint
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
@@ -66,7 +66,7 @@ app.use('/api/workouts', workoutRoutes);
 app.use('/api/progress', progressRoutes);
 
 // Root endpoint
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
   res.json({
     message: 'Olympic Workout Calendar API',
     version: '1.0.0',
@@ -88,7 +88,7 @@ app.use((req: Request, res: Response) => {
 });
 
 // Global error handler
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Error:', err);
 
   const statusCode = (err as any).statusCode || 500;

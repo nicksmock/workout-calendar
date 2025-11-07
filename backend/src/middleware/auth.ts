@@ -1,10 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import dotenv from 'dotenv';
 
-dotenv.config();
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+// Single-user application - hardcoded user ID from seed data
+const DEFAULT_USER = {
+  id: '550e8400-e29b-41d4-a716-446655440001',
+  username: 'sarah',
+  email: 'sarah@example.com',
+};
 
 export interface AuthRequest extends Request {
   user?: {
@@ -14,47 +15,21 @@ export interface AuthRequest extends Request {
   };
 }
 
+// Simple middleware that sets the default user for all requests
 export const authenticateToken = (
   req: AuthRequest,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-  if (!token) {
-    res.status(401).json({ error: 'Access token required' });
-    return;
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as {
-      id: string;
-      username: string;
-      email: string;
-    };
-    req.user = decoded;
-    next();
-  } catch (error) {
-    console.error('Token verification error:', error);
-    res.status(403).json({ error: 'Invalid or expired token' });
-  }
+  req.user = DEFAULT_USER;
+  next();
 };
 
-export const generateToken = (user: {
+// Deprecated: No longer generates tokens (kept for backward compatibility)
+export const generateToken = (_user: {
   id: string;
   username: string;
   email: string;
 }): string => {
-  return jwt.sign(
-    {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-    },
-    JWT_SECRET,
-    {
-      expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-    }
-  );
+  return '';
 };
