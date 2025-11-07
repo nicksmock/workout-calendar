@@ -63,37 +63,36 @@ A modern, full-stack fitness tracking application with beautiful glassmorphism U
 - **Express 4** - Web application framework
 - **TypeScript 5** - Type-safe JavaScript
 - **PostgreSQL 15** - Relational database
-- **JWT** - Secure authentication
-- **bcrypt** - Password hashing
 
 #### Infrastructure
 - **Docker** - Containerization
 - **Docker Compose** - Multi-container orchestration
-- **Nginx** - Reverse proxy and static file serving
+- **Nginx** - Static file serving (internal to frontend container)
+- **Traefik** - Optional reverse proxy for Unraid/production (see [UNRAID-SETUP.md](./UNRAID-SETUP.md))
 - **Health Checks** - Service monitoring
 
 ### System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                      Frontend (Port 8680)               │
-│              React SPA + Nginx (Reverse Proxy)          │
-│                                                         │
-│  - Serves React application                            │
-│  - Proxies /api/* requests to backend                  │
-│  - Handles static asset caching                        │
-└─────────────────┬───────────────────────────────────────┘
+│                   Frontend Container                     │
+│                  React SPA + Nginx                       │
+│                                                          │
+│  - Serves React application                             │
+│  - Single-page application with client-side routing     │
+│  - Static assets with caching                           │
+└─────────────────┬────────────────────────────────────────┘
                   │
-                  │ HTTP Proxy
+                  │ HTTP Requests to /api
                   ▼
 ┌─────────────────────────────────────────────────────────┐
 │                   Backend API (Port 3001)               │
 │               Express + TypeScript + Node.js            │
 │                                                         │
 │  Endpoints:                                             │
-│  - /api/auth      → Authentication & User Management    │
-│  - /api/workouts  → Workouts, Sessions, Exercises       │
-│  - /api/progress  → Stats, PRs, Analytics, Goals        │
+│  - /api/workouts  → Workout sessions and tracking       │
+│  - /api/progress  → Stats, PRs, and analytics           │
+│  - /health        → Health check endpoint               │
 └─────────────────┬───────────────────────────────────────┘
                   │
                   │ SQL Queries
@@ -102,20 +101,24 @@ A modern, full-stack fitness tracking application with beautiful glassmorphism U
 │              PostgreSQL Database (Port 5432)            │
 │                                                         │
 │  Tables:                                                │
-│  - users, user_preferences                              │
+│  - users (single user for tracking)                     │
 │  - exercises, workout_templates                         │
 │  - workout_sessions, exercise_logs                      │
 │  - progress_measurements, user_goals                    │
 └─────────────────────────────────────────────────────────┘
 ```
 
+**Note:** For Unraid deployment with Traefik, see [UNRAID-SETUP.md](./UNRAID-SETUP.md)
+
 ## 📦 Database Schema
 
 ### Core Tables
 
-#### Users & Authentication
-- `users` - User accounts with authentication
+#### Users
+- `users` - User account (single user for tracking)
 - `user_preferences` - User settings and preferences
+
+**Note:** While the database schema supports multiple users, the current application is configured for single-user tracking without authentication.
 
 #### Workout System
 - `exercises` - Exercise library with videos
@@ -169,19 +172,7 @@ docker-compose ps
 - Backend API: http://localhost:3001
 - API Health: http://localhost:3001/health
 
-### Default Users
-
-Two users are created automatically:
-
-**User 1 (Sarah)**
-- Username: `sarah`
-- Password: `workout2024`
-
-**User 2 (Partner)**
-- Username: `partner`
-- Password: `workout2024`
-
-⚠️ **Change these passwords in production!**
+**Note:** The application uses single-user tracking with a hardcoded user ID from the seed data. No login is required.
 
 ## 🔧 Development
 
@@ -217,8 +208,6 @@ DB_PORT=5432
 DB_NAME=workout_calendar
 DB_USER=workout_user
 DB_PASSWORD=your_secure_password
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=7d
 CORS_ORIGIN=http://localhost:8680
 ```
 
@@ -229,31 +218,6 @@ VITE_API_URL=http://localhost:3001/api
 ```
 
 ## 📡 API Documentation
-
-### Authentication Endpoints
-
-#### POST /api/auth/login
-Login with username and password
-```json
-{
-  "username": "sarah",
-  "password": "workout2024"
-}
-```
-
-#### POST /api/auth/register
-Register a new user
-```json
-{
-  "username": "newuser",
-  "email": "user@example.com",
-  "password": "securepassword",
-  "fullName": "Full Name"
-}
-```
-
-#### GET /api/auth/profile
-Get current user profile (requires JWT token)
 
 ### Workout Endpoints
 
@@ -364,9 +328,8 @@ docker-compose logs -f frontend
 
 ### Production Checklist
 - [ ] Change default database password
-- [ ] Generate secure JWT secret (min 256-bit)
 - [ ] Update CORS_ORIGIN to production domain
-- [ ] Enable HTTPS/TLS
+- [ ] Enable HTTPS/TLS (via Traefik or other reverse proxy)
 - [ ] Set up firewall rules
 - [ ] Implement rate limiting
 - [ ] Regular database backups
@@ -374,20 +337,7 @@ docker-compose logs -f frontend
 - [ ] Use environment variables for secrets
 - [ ] Implement log rotation
 
-### Password Requirements
-- Minimum 8 characters
-- Use bcrypt with 10 rounds
-- Consider enforcing complexity rules
-
-## 🎨 Frontend Architecture (To Be Implemented - Phase 2)
-
-The current frontend will be refactored into:
-- Component library with reusable UI elements
-- State management (Context API or Zustand)
-- API client with error handling
-- Protected routes with authentication
-- Enhanced video player component
-- Progress visualization components
+**Note:** This application is designed for single-user personal tracking without authentication. For multi-user deployments, implement proper authentication and authorization.
 
 ## 📈 Progress Tracking Features
 
@@ -400,13 +350,17 @@ The current frontend will be refactored into:
 - ✅ Body measurements
 - ✅ Goal setting and tracking
 
-### Planned Enhancements (Phases 3-4)
-- 📊 Interactive progress charts
+### Implemented Features
+- ✅ Interactive progress charts (bar charts, area charts)
+- ✅ Embedded video player with modal
+- ✅ Mobile-optimized responsive interface
+- ✅ Workout search and filtering
+
+### Future Enhancements
 - 📸 Progress photo management
-- 🎯 Advanced analytics
-- 📱 Mobile-optimized interface
-- 🎥 Embedded video player
-- 🔍 Exercise search and filtering
+- 🎯 Advanced analytics and insights
+- 📤 Export data to CSV/PDF
+- 🔔 Workout reminders and notifications
 
 ## 🛠️ Troubleshooting
 
@@ -536,6 +490,7 @@ MIT License - Feel free to use this as a reference for your own projects.
 ## 📚 Documentation
 
 - [Testing Guide](./TESTING.md) - Comprehensive testing checklist and instructions
+- [Unraid Setup Guide](./UNRAID-SETUP.md) - Traefik deployment for Unraid
 - [API Documentation](#-api-documentation) - API endpoints and usage
 - [Database Schema](#-database-schema) - Database structure and relationships
 
