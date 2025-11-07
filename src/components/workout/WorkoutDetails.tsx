@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Edit3, Play, Dumbbell } from 'lucide-react';
+import { X, Edit3, Dumbbell } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { VideoPlayer } from '../ui/VideoPlayer';
 
 interface Exercise {
   name: string;
@@ -104,17 +105,7 @@ export const WorkoutDetails: React.FC<WorkoutDetailsProps> = ({
               <div key={index} className="glass-card p-4 rounded-lg hover:bg-white/15 transition-colors">
                 <div className="flex items-start justify-between gap-3">
                   <span className="text-white text-sm flex-1">{exercise.name}</span>
-                  {exercise.video && (
-                    <a
-                      href={exercise.video}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-3 py-1 rounded-pill bg-gradient-primary text-white text-xs font-semibold hover:scale-105 transition-transform"
-                    >
-                      <Play className="w-3 h-3" />
-                      Video
-                    </a>
-                  )}
+                  <VideoPlayer videoUrl={exercise.video} title={exercise.name} />
                 </div>
               </div>
             ))}
