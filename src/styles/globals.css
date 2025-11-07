@@ -1,0 +1,333 @@
+/* Jeton Theme - Global Styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================================
+   BASE STYLES
+   ============================================================================ */
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html {
+    @apply antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply font-sans text-base text-white leading-body;
+    background: linear-gradient(135deg, #F85C70 0%, #F97C66 50%, #F6A85E 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-bold tracking-heading leading-heading;
+  }
+
+  h1 {
+    @apply text-heading-1;
+  }
+
+  h2 {
+    @apply text-heading-2;
+  }
+
+  h3 {
+    @apply text-heading-3;
+  }
+}
+
+/* ============================================================================
+   COMPONENTS
+   ============================================================================ */
+
+@layer components {
+  /* Glassmorphism Card */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    @apply rounded-lg shadow-soft;
+  }
+
+  .glass-card-strong {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    @apply rounded-lg shadow-medium;
+  }
+
+  /* Primary Button */
+  .btn-primary {
+    @apply bg-button-bg text-white font-semibold rounded-pill px-6 py-3;
+    @apply transition-all duration-300 ease-in-out;
+    @apply hover:bg-button-hover hover:shadow-medium hover:scale-105;
+    @apply active:scale-95;
+  }
+
+  /* Secondary Button */
+  .btn-secondary {
+    @apply bg-transparent text-white font-semibold rounded-pill px-6 py-3;
+    @apply border border-white/50 transition-all duration-300 ease-in-out;
+    @apply hover:bg-white/10 hover:border-white/70;
+    @apply active:scale-95;
+  }
+
+  /* Input Fields with Glassmorphism */
+  .input-glass {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    @apply rounded-md px-4 py-2 text-white placeholder-white/60;
+    @apply focus:outline-none focus:ring-2 focus:ring-white/50 focus:border-white/50;
+    @apply transition-all duration-200;
+  }
+
+  .input-glass::placeholder {
+    @apply text-white/60;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-flex items-center justify-center rounded-pill px-3 py-1 text-xs font-semibold;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    @apply text-white;
+  }
+
+  /* Workout Card */
+  .workout-card {
+    @apply glass-card p-4 cursor-pointer transition-all duration-300;
+    @apply hover:bg-white/20 hover:shadow-medium hover:scale-105;
+    @apply active:scale-95;
+  }
+
+  .workout-card.completed {
+    @apply ring-2 ring-secondary ring-offset-2 ring-offset-transparent;
+  }
+
+  /* Container */
+  .container-custom {
+    @apply max-w-container mx-auto px-6 md:px-12;
+  }
+
+  /* Gradient Text */
+  .text-gradient {
+    background: linear-gradient(to right, #F85C70, #F6A85E);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Stat Card */
+  .stat-card {
+    @apply glass-card p-6 text-center;
+  }
+
+  .stat-value {
+    @apply text-4xl font-bold text-white mb-1;
+  }
+
+  .stat-label {
+    @apply text-sm text-white/80 uppercase tracking-wide;
+  }
+
+  /* Progress Bar */
+  .progress-bar {
+    @apply w-full h-2 rounded-pill overflow-hidden;
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .progress-bar-fill {
+    @apply h-full rounded-pill transition-all duration-500;
+    background: linear-gradient(to right, #F85C70, #F6A85E);
+  }
+
+  /* Modal */
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/40 backdrop-blur-sm z-50;
+    @apply flex items-center justify-center p-4;
+  }
+
+  .modal-content {
+    @apply glass-card-strong max-w-2xl w-full p-6 md:p-8;
+    @apply animate-fade-in;
+  }
+
+  /* Checkbox - Custom Glass Style */
+  .checkbox-glass {
+    @apply appearance-none w-5 h-5 rounded border-2 border-white/50 cursor-pointer;
+    @apply bg-white/10 backdrop-blur-sm transition-all duration-200;
+    @apply checked:bg-gradient-primary checked:border-secondary;
+    @apply hover:border-white/70;
+  }
+
+  /* Divider */
+  .divider {
+    @apply border-t border-white/20 my-4;
+  }
+}
+
+/* ============================================================================
+   UTILITIES
+   ============================================================================ */
+
+@layer utilities {
+  /* Scrollbar Styling */
+  .scrollbar-glass::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+  }
+
+  .scrollbar-glass::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+  }
+
+  /* Text Shadow for Better Readability */
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .text-shadow-strong {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Gradient Background Animation */
+  .bg-gradient-animated {
+    background: linear-gradient(135deg, #F85C70, #F97C66, #F6A85E, #F85C70);
+    background-size: 400% 400%;
+    animation: gradient-shift 15s ease infinite;
+  }
+
+  @keyframes gradient-shift {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+
+  /* Hover Lift Effect */
+  .hover-lift {
+    @apply transition-transform duration-300;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-4px);
+  }
+
+  /* Frosted Glass Effect */
+  .frosted-glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+/* Fade In Animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Float Animation */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+/* Pulse Animation for Loading States */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+  }
+  50% {
+    opacity: 0.7;
+    box-shadow: 0 0 20px 10px rgba(255, 255, 255, 0);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Shimmer Effect for Skeleton Loading */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  background-size: 1000px 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* ============================================================================
+   RESPONSIVE UTILITIES
+   ============================================================================ */
+
+/* Mobile-first responsive padding */
+.responsive-padding {
+  @apply px-6 py-4 md:px-12 md:py-8;
+}
+
+/* Card Grid */
+.card-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6;
+}
+
+/* Stats Grid */
+.stats-grid {
+  @apply grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6;
+}
