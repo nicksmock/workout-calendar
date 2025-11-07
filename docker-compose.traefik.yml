@@ -1,0 +1,140 @@
+version: '3.8'
+
+# =============================================================================
+# Olympic Workout Calendar - Traefik Configuration for Unraid
+# =============================================================================
+# This docker-compose file is optimized for Unraid with Traefik
+#
+# Prerequisites:
+# 1. Traefik network must exist: docker network create traefik
+# 2. Create .env file from .env.example with your configuration
+# 3. Update DOMAIN in .env to match your setup (e.g., workout.yourdomain.com)
+#
+# Usage:
+#   docker-compose -f docker-compose.traefik.yml up -d --build
+# =============================================================================
+
+services:
+  # ============================================================================
+  # PostgreSQL Database
+  # ============================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: workout-calendar-db
+    restart: unless-stopped
+    networks:
+      - internal
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-workout_calendar}
+      - POSTGRES_USER=${POSTGRES_USER:-workout_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-change_me}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-workout_user} -d ${POSTGRES_DB:-workout_calendar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    labels:
+      - "com.unraid.docker.managed=dockerman"
+
+  # ============================================================================
+  # Backend API
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: dockerfile
+    container_name: workout-calendar-backend
+    restart: unless-stopped
+    networks:
+      - traefik
+      - internal
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=${PORT:-3001}
+      - HOST=${HOST:-0.0.0.0}
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_NAME=${POSTGRES_DB:-workout_calendar}
+      - DB_USER=${POSTGRES_USER:-workout_user}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-change_me}
+      - JWT_SECRET=${JWT_SECRET:-change_this_secret}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - CORS_ORIGIN=https://${DOMAIN:-workout.localhost}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "com.unraid.docker.managed=dockerman"
+      # Traefik labels for backend API
+      - "traefik.enable=true"
+      - "traefik.http.routers.workout-api.rule=Host(`${DOMAIN:-workout.localhost}`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.workout-api.entrypoints=${TRAEFIK_ENTRYPOINT:-https}"
+      - "traefik.http.routers.workout-api.tls=true"
+      - "traefik.http.routers.workout-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:-cloudflare}"
+      - "traefik.http.services.workout-api.loadbalancer.server.port=3001"
+
+  # ============================================================================
+  # Frontend (React App with Nginx)
+  # ============================================================================
+  frontend:
+    build:
+      context: .
+      dockerfile: dockerfile
+      args:
+        - VITE_API_URL=https://${DOMAIN:-workout.localhost}/api
+    container_name: workout-calendar-frontend
+    restart: unless-stopped
+    networks:
+      - traefik
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+    depends_on:
+      - backend
+    labels:
+      - "com.unraid.docker.managed=dockerman"
+      - "com.unraid.docker.icon=https://cdn.jsdelivr.net/gh/homarr-labs/dashboard-icons/webp/synology-calendar.webp"
+      - "com.unraid.docker.webui=https://${DOMAIN:-workout.localhost}"
+      # Traefik labels for frontend
+      - "traefik.enable=true"
+      - "traefik.http.routers.workout-frontend.rule=Host(`${DOMAIN:-workout.localhost}`)"
+      - "traefik.http.routers.workout-frontend.entrypoints=${TRAEFIK_ENTRYPOINT:-https}"
+      - "traefik.http.routers.workout-frontend.tls=true"
+      - "traefik.http.routers.workout-frontend.tls.certresolver=${TRAEFIK_CERTRESOLVER:-cloudflare}"
+      - "traefik.http.services.workout-frontend.loadbalancer.server.port=80"
+      # Security headers
+      - "traefik.http.middlewares.workout-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.workout-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.workout-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.workout-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.workout-headers.headers.stsPreload=true"
+      - "traefik.http.routers.workout-frontend.middlewares=workout-headers"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  # External Traefik network - must be created first
+  traefik:
+    external: true
+  # Internal network for database communication
+  internal:
+    driver: bridge
