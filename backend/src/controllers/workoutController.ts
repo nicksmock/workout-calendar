@@ -1,10 +1,10 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
-import { query, transaction } from '../db/connection';
+import { query } from '../db/connection';
 
 // Get all workout templates
 export const getWorkoutTemplates = async (
-  req: AuthRequest,
+  _req: AuthRequest,
   res: Response
 ): Promise<void> => {
   try {
