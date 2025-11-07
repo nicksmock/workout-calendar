@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
-import { Trophy, AlertCircle } from 'lucide-react';
+import { Trophy, AlertCircle, Calendar, TrendingUp, History } from 'lucide-react';
 import { WeekView, StatsDisplay, WorkoutDetails, WorkoutEditForm } from './components/workout';
 import { CircularProgress } from './components/ui/ProgressBar';
+import { ProgressDashboard } from './components/progress/ProgressDashboard';
+import { WorkoutHistory } from './components/progress/WorkoutHistory';
 import { useWorkoutData } from './hooks/useWorkoutData';
 import { PROGRAM_STRUCTURE, WORKOUT_DETAILS, DAY_NAMES } from './data/workoutProgram';
 
+type ViewMode = 'calendar' | 'progress' | 'history';
+
 const OlympicWorkoutCalendar = () => {
+  const [currentView, setCurrentView] = useState<ViewMode>('calendar');
   const [currentWeek, setCurrentWeek] = useState(1);
   const [selectedDay, setSelectedDay] = useState<any>(null);
   const [editingDay, setEditingDay] = useState<string | null>(null);
@@ -150,13 +155,40 @@ const OlympicWorkoutCalendar = () => {
           </div>
         </header>
 
-        {/* Assessment Week Stats */}
-        {(currentWeek === 4 || currentWeek === 8 || currentWeek === 12) && (
-          <StatsDisplay stats={calculateStats(currentWeek)} currentWeek={currentWeek} />
-        )}
+        {/* Navigation Tabs */}
+        <div className="flex justify-center mb-8">
+          <div className="glass-card-strong p-2 rounded-pill inline-flex gap-2">
+            <TabButton
+              icon={<Calendar className="w-4 h-4" />}
+              label="Calendar"
+              active={currentView === 'calendar'}
+              onClick={() => setCurrentView('calendar')}
+            />
+            <TabButton
+              icon={<TrendingUp className="w-4 h-4" />}
+              label="Progress"
+              active={currentView === 'progress'}
+              onClick={() => setCurrentView('progress')}
+            />
+            <TabButton
+              icon={<History className="w-4 h-4" />}
+              label="History"
+              active={currentView === 'history'}
+              onClick={() => setCurrentView('history')}
+            />
+          </div>
+        </div>
 
-        {/* Week View */}
-        <div className="mb-6">
+        {/* Calendar View */}
+        {currentView === 'calendar' && (
+          <>
+            {/* Assessment Week Stats */}
+            {(currentWeek === 4 || currentWeek === 8 || currentWeek === 12) && (
+              <StatsDisplay stats={calculateStats(currentWeek)} currentWeek={currentWeek} />
+            )}
+
+            {/* Week View */}
+            <div className="mb-6">
           <WeekView
             currentWeek={currentWeek}
             phase={weekData.phase}
@@ -170,33 +202,45 @@ const OlympicWorkoutCalendar = () => {
           />
         </div>
 
-        {/* Workout Details or Edit Form */}
-        {selectedDay && (
-          <div className="mb-8 animate-fade-in">
-            {isEditingCurrentDay ? (
-              <div className="glass-card-strong p-6 md:p-8 rounded-xl">
-                <h3 className="text-2xl font-bold text-white mb-6 text-shadow">
-                  Log Your Workout
-                </h3>
-                <WorkoutEditForm
-                  dayData={apiToComponentData(getWorkoutData(selectedDay.week, selectedDay.day))}
-                  workout={selectedDay.workout}
-                  onSave={handleSave}
-                  onCancel={handleCancel}
-                />
+            {/* Workout Details or Edit Form */}
+            {selectedDay && (
+              <div className="mb-8 animate-fade-in">
+                {isEditingCurrentDay ? (
+                  <div className="glass-card-strong p-6 md:p-8 rounded-xl">
+                    <h3 className="text-2xl font-bold text-white mb-6 text-shadow">
+                      Log Your Workout
+                    </h3>
+                    <WorkoutEditForm
+                      dayData={apiToComponentData(getWorkoutData(selectedDay.week, selectedDay.day))}
+                      workout={selectedDay.workout}
+                      onSave={handleSave}
+                      onCancel={handleCancel}
+                    />
+                  </div>
+                ) : (
+                  <WorkoutDetails
+                    week={selectedDay.week}
+                    day={selectedDay.day}
+                    dayName={dayNames[selectedDay.day]}
+                    workoutInfo={workoutDetails[selectedDay.workout]}
+                    dayData={apiToComponentData(getWorkoutData(selectedDay.week, selectedDay.day))}
+                    onClose={handleClose}
+                    onEdit={handleEdit}
+                  />
+                )}
               </div>
-            ) : (
-              <WorkoutDetails
-                week={selectedDay.week}
-                day={selectedDay.day}
-                dayName={dayNames[selectedDay.day]}
-                workoutInfo={workoutDetails[selectedDay.workout]}
-                dayData={apiToComponentData(getWorkoutData(selectedDay.week, selectedDay.day))}
-                onClose={handleClose}
-                onEdit={handleEdit}
-              />
             )}
-          </div>
+          </>
+        )}
+
+        {/* Progress View */}
+        {currentView === 'progress' && (
+          <ProgressDashboard workoutData={workoutDataForComponents} />
+        )}
+
+        {/* History View */}
+        {currentView === 'history' && (
+          <WorkoutHistory workoutData={workoutDataForComponents} />
         )}
 
         {/* Footer */}
@@ -207,6 +251,30 @@ const OlympicWorkoutCalendar = () => {
         </footer>
       </div>
     </div>
+  );
+};
+
+// Tab Button Component
+interface TabButtonProps {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+const TabButton: React.FC<TabButtonProps> = ({ icon, label, active, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-2 px-6 py-3 rounded-pill font-medium transition-all ${
+        active
+          ? 'bg-gradient-primary text-white shadow-medium'
+          : 'text-white/70 hover:text-white hover:bg-white/10'
+      }`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
   );
 };
 
