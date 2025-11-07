@@ -63,8 +63,6 @@ services:
       - DB_NAME=${POSTGRES_DB:-workout_calendar}
       - DB_USER=${POSTGRES_USER:-workout_user}
       - DB_PASSWORD=${POSTGRES_PASSWORD:-change_me}
-      - JWT_SECRET=${JWT_SECRET:-change_this_secret}
-      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
       - CORS_ORIGIN=https://${DOMAIN:-workout.localhost}
     depends_on:
       postgres:

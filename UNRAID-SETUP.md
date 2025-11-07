@@ -90,14 +90,7 @@ Navigate to your domain in a browser:
 https://workout.yourdomain.com
 ```
 
-## Default Credentials
-
-The seed data creates one default user:
-
-**Username:** `sarah`
-**Password:** `workout2024`
-
-⚠️ **IMPORTANT:** Log in and change the password immediately!
+**Note:** This application uses single-user tracking without authentication. No login is required - the app automatically tracks workouts for the seeded user.
 
 ## Network Architecture
 
@@ -300,13 +293,14 @@ If you see CORS errors in the browser console:
 
 ## Security Best Practices
 
-1. **Change default passwords** immediately
-2. **Use strong JWT secret** (min 32 characters, random)
-3. **Use strong database password**
-4. **Keep containers updated** regularly
-5. **Enable Traefik authentication** if exposing to internet
-6. **Set up backups** for the database
-7. **Monitor logs** for suspicious activity
+1. **Use strong database password** in your .env file
+2. **Keep containers updated** regularly
+3. **Enable Traefik authentication** if exposing to internet (recommended for single-user apps)
+4. **Set up regular database backups**
+5. **Monitor logs** for suspicious activity
+6. **Restrict network access** via firewall rules if needed
+
+**Note:** This app has no built-in authentication. For internet exposure, consider adding Traefik BasicAuth or OAuth middleware for access control.
 
 ## Unraid-Specific Tips
 
