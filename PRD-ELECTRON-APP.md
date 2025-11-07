@@ -4,6 +4,9 @@
 **Date:** November 7, 2025
 **Target Platform:** macOS (M1 MacBook Air)
 **Architecture:** ARM64 (Apple Silicon)
+**Use Case:** Personal use only (no distribution/code signing required)
+
+> **Note:** This PRD is designed to be moved to a new, empty repository where the Electron app will be built from scratch, referencing the original Docker/web codebase as source material.
 
 ---
 
@@ -31,9 +34,9 @@ Transform the Olympic Workout Calendar from a Docker/Unraid web application into
 - ✅ 100% feature parity with current web application
 - ✅ Identical UI/UX with glassmorphism design preserved
 - ✅ App launches in < 3 seconds on M1 MacBook Air
-- ✅ < 150MB installer size
+- ✅ < 150MB app bundle size
 - ✅ < 200MB memory footprint during typical usage
-- ✅ Zero configuration required for end users
+- ✅ Zero configuration required (just open and use)
 - ✅ All workout data persists locally and reliably
 
 ---
@@ -42,20 +45,81 @@ Transform the Olympic Workout Calendar from a Docker/Unraid web application into
 
 ### 2.1 Core User Stories
 
-**US-1: Easy Installation**
-> As a user, I want to download and install the app like any other macOS application, so I don't need Docker or technical setup.
+**US-1: Zero Setup**
+> I want to open the app without any Docker, server, or database setup - just double-click and go.
 
-**US-2: Offline Access**
-> As a user, I want to access my workouts and log progress without an internet connection, so I can use the app anywhere.
+**US-2: Offline First**
+> I want to access my workouts and log progress without an internet connection, so I can use the app anywhere on my MacBook.
 
-**US-3: Data Ownership**
-> As a user, I want all my workout data stored locally on my Mac, so I control my fitness information.
+**US-3: Local Data**
+> I want all my workout data stored locally on my Mac under my control, with easy backup/export options.
 
-**US-4: Native Experience**
-> As a user, I want the app to feel like a native macOS application with proper window controls, menu bar, and keyboard shortcuts.
+**US-4: Native macOS Feel**
+> I want the app to feel like a native Mac application with proper window controls, menu bar, and familiar keyboard shortcuts.
 
-**US-5: Feature Parity**
-> As a user, I want all existing features (calendar, progress tracking, video player, history) to work exactly as before.
+**US-5: Keep Everything**
+> I want all existing features (calendar, progress tracking, video player, history) to work exactly as they do in the web version.
+
+---
+
+## 2.2 New Repository Setup
+
+Since this PRD will move to a new, empty repository, here's the recommended initial structure:
+
+```
+olympic-workout-calendar-electron/     # New repo
+├── README.md                          # Setup and build instructions
+├── PRD-ELECTRON-APP.md               # This document
+├── package.json                       # Electron project configuration
+├── package-lock.json
+├── tsconfig.json                      # TypeScript config
+├── electron-builder.yml               # Build configuration
+│
+├── frontend/                          # Copy from original repo
+│   ├── src/
+│   │   ├── components/               # All React components
+│   │   ├── hooks/
+│   │   ├── services/
+│   │   ├── data/
+│   │   └── styles/
+│   ├── package.json
+│   ├── vite.config.ts
+│   └── tsconfig.json
+│
+├── electron/                          # New Electron-specific code
+│   ├── main.ts                       # Main process entry point
+│   ├── preload.ts                    # Preload script for security
+│   ├── menu.ts                       # Native menu configuration
+│   ├── db/
+│   │   ├── schema.sqlite.sql        # SQLite schema (converted)
+│   │   ├── seeds.sql                # Initial data
+│   │   └── connection.ts            # Database connection
+│   ├── api/                          # API handlers (from backend)
+│   │   ├── workouts.ts
+│   │   ├── progress.ts
+│   │   └── index.ts
+│   └── assets/
+│       ├── icon.icns                # macOS app icon
+│       └── icon.png
+│
+└── scripts/                          # Build and utility scripts
+    ├── build.sh
+    └── convert-schema.js            # PostgreSQL → SQLite converter
+```
+
+**Migration from Original Repo:**
+1. Copy `frontend/` directory entirely (no changes needed)
+2. Copy React components, hooks, services (100% reusable)
+3. Adapt `backend/src/controllers/` → `electron/api/`
+4. Convert `backend/src/db/schema.sql` → `electron/db/schema.sqlite.sql`
+5. Copy `backend/src/db/seeds/` data files
+
+**What NOT to copy:**
+- ❌ Docker files (Dockerfile, docker-compose.yml)
+- ❌ Nginx configuration
+- ❌ Traefik configuration
+- ❌ UNRAID-SETUP.md
+- ❌ PostgreSQL-specific code
 
 ---
 
@@ -214,11 +278,10 @@ macOS Integration:
 ### 4.2 Should-Have Features (v1.1)
 
 #### 4.2.1 Auto-Updates
-- Electron Updater integration
-- Check for updates on launch
-- Download and install updates in background
-- Notify user when update ready
-- Release notes display
+**Not needed for personal use** - Skip this entirely. When you want to update:
+1. Pull latest code from repo
+2. Rebuild with `npm run electron:build`
+3. Copy new `.app` to Applications (overwrite old one)
 
 #### 4.2.2 Enhanced Native Integration
 - Menu bar extra (icon in top-right menu bar)
@@ -365,8 +428,8 @@ olympic-workout-calendar/
   },
   "dependencies": {
     "better-sqlite3": "^9.2.0",
-    "electron-store": "^8.1.0",
-    "electron-updater": "^6.1.0"
+    "electron-store": "^8.1.0"
+    // electron-updater not needed for personal use
   }
 }
 ```
@@ -382,18 +445,33 @@ directories:
 
 mac:
   target:
-    - target: dmg
+    - target: dir  # Just creates .app in a directory (no DMG needed for personal use)
       arch:
         - arm64  # M1/M2/M3 chips
-    - target: zip
-      arch:
-        - arm64
   category: public.app-category.healthcare-fitness
   icon: electron/assets/icon.icns
-  hardenedRuntime: true
-  gatekeeperAssess: false
-  entitlements: electron/entitlements.mac.plist
-  entitlementsInherit: electron/entitlements.mac.plist
+  # No code signing for personal use - remove these lines:
+  # hardenedRuntime: true
+  # gatekeeperAssess: false
+  # entitlements: electron/entitlements.mac.plist
+
+files:
+  - dist-frontend/**/*
+  - dist-electron/**/*
+  - node_modules/**/*
+  - package.json
+
+# No notarization needed for personal use
+# afterSign: electron/notarize.js
+```
+
+**Alternative: If you want a DMG (optional):**
+```yaml
+mac:
+  target:
+    - target: dmg
+      arch:
+        - arm64
 
 dmg:
   title: ${productName} ${version}
@@ -408,44 +486,55 @@ dmg:
       y: 180
       type: link
       path: /Applications
-
-files:
-  - dist-frontend/**/*
-  - dist-electron/**/*
-  - node_modules/**/*
-  - package.json
-
-afterSign: electron/notarize.js  # macOS notarization
 ```
 
 ### 6.3 Code Signing & Notarization
 
-**Requirements:**
-- Apple Developer account ($99/year)
-- Developer ID Application certificate
-- App-specific password for notarization
+**For Personal Use: NOT REQUIRED ✅**
 
-**Process:**
-1. Sign app with Developer ID
-2. Notarize with Apple (automated in build)
-3. Staple notarization ticket to app
-4. Distribute DMG
+Since this app is for personal use only, you can skip all code signing and notarization steps:
 
-**For Development (No Signing):**
-- Users will see "unidentified developer" warning
-- Right-click → Open to bypass (one-time)
-- Consider signing even for personal use
+- ✅ **No Apple Developer account needed** ($99/year saved)
+- ✅ **No code signing certificates required**
+- ✅ **No notarization process**
+
+**Opening the Unsigned App:**
+
+When you first launch the app, macOS Gatekeeper will block it with "cannot be opened because it is from an unidentified developer."
+
+**To bypass (one-time only):**
+1. Right-click (or Control+click) the app
+2. Select "Open" from context menu
+3. Click "Open" in the dialog
+4. App will launch and be trusted from now on
+
+**Alternatively:**
+```bash
+# Remove the quarantine flag
+xattr -cr /Applications/Olympic\ Workout\ Calendar.app
+```
 
 ### 6.4 Installation Experience
 
-**User Journey:**
-1. Download `Olympic-Workout-Calendar-1.0.0-arm64.dmg` (estimated 120MB)
-2. Double-click DMG to mount
-3. Drag app icon to Applications folder
-4. Eject DMG
-5. Open app from Applications or Spotlight
-6. First launch: Database initializes with workout program
-7. Start logging workouts immediately
+**Personal Use - Simple Installation:**
+
+After building with `npm run electron:build`, you'll find your app at:
+```
+dist-electron-build/mac-arm64/Olympic Workout Calendar.app
+```
+
+**Install:**
+1. Copy the `.app` to `/Applications/`
+2. Right-click → Open (first time only to bypass Gatekeeper)
+3. Database automatically initializes on first launch
+4. Start logging workouts immediately
+
+**Or if you build a DMG:**
+1. Double-click `Olympic-Workout-Calendar-1.0.0-arm64.dmg`
+2. Drag app to Applications folder
+3. Eject DMG
+4. Right-click app → Open (first time only)
+5. Ready to use!
 
 ---
 
@@ -661,11 +750,12 @@ const mainWindow = new BrowserWindow({
   "better-sqlite3": "^9.2.0",
   "electron-builder": "^24.9.1",
   "electron-store": "^8.1.0",
-  "electron-updater": "^6.1.0",
   "@types/better-sqlite3": "^7.6.8",
   "concurrently": "^8.2.0"
 }
 ```
+
+**Note:** `electron-updater` removed - not needed for personal use
 
 ### 15.2 Estimated Timeline
 - **Phase 1:** 1-2 weeks (Electron setup)
@@ -685,13 +775,20 @@ const mainWindow = new BrowserWindow({
 
 ---
 
-## 16. Open Questions
+## 16. Decisions Made ✅
 
-1. **Code Signing:** Do you have an Apple Developer account, or will this be for personal use only?
-2. **Auto-Updates:** Do you want auto-update functionality in v1.0 or defer to v1.1?
-3. **App Name:** Keep "Olympic Workout Calendar" or rename for desktop release?
-4. **Data Migration:** Do you have existing Docker data to migrate, or starting fresh?
-5. **Distribution:** Personal use only, or planning to distribute to others?
+1. **Code Signing:** ❌ Not needed - personal use only
+2. **Auto-Updates:** ❌ Not needed - manual rebuild when updating
+3. **App Name:** Keep "Olympic Workout Calendar" ✅
+4. **Distribution:** Personal use only ✅
+
+## 17. Open Questions
+
+1. **Data Migration:** Do you have existing workout data from the Docker version to migrate?
+2. **Database Location Preference:** Default to `~/Library/Application Support/` or custom location?
+3. **Video Player:** Keep YouTube iframe embed, or explore native video player?
+4. **Build Target:** Just `dir` output, or do you want DMG creation for cleaner installs?
+5. **Development Priority:** Start with minimal viable electron setup, or include menu bar extras from the start?
 
 ---
 
