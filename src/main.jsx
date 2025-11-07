@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import OlympicWorkoutCalendar from './olympic_workout_calendar'
+import './styles/globals.css'
+import OlympicWorkoutCalendar from './olympic_workout_calendar_redesigned'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
