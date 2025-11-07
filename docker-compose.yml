@@ -50,8 +50,6 @@ services:
       - DB_NAME=workout_calendar
       - DB_USER=workout_user
       - DB_PASSWORD=secure_workout_password_change_in_production
-      - JWT_SECRET=change_this_to_a_secure_random_string_in_production_123456789
-      - JWT_EXPIRES_IN=7d
       - CORS_ORIGIN=http://localhost:8680
     depends_on:
       postgres:
