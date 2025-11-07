@@ -56,11 +56,12 @@ DOMAIN=workout.yourdomain.com
 # Secure database password
 POSTGRES_PASSWORD=your_secure_password_here
 
-# JWT secret (min 32 characters)
-JWT_SECRET=your_very_long_random_jwt_secret_min_32_chars
-
 # Traefik settings (match your Traefik config)
-TRAEFIK_ENTRYPOINT=https
+TRAEFIK_ENTRYPOINT=https  # or websecure, depending on your setup
+```
+
+**Note:** If you use static SSL certificates (cert/key files) in Traefik, no certresolver is needed. If you use ACME/Let's Encrypt, add:
+```env
 TRAEFIK_CERTRESOLVER=cloudflare  # or letsencrypt, etc.
 ```
 
@@ -118,9 +119,10 @@ Traefik (Port 443)
 - "traefik.http.routers.workout-frontend.rule=Host(`workout.yourdomain.com`)"
 - "traefik.http.routers.workout-frontend.entrypoints=https"
 - "traefik.http.routers.workout-frontend.tls=true"
-- "traefik.http.routers.workout-frontend.tls.certresolver=cloudflare"
 - "traefik.http.services.workout-frontend.loadbalancer.server.port=80"
 ```
+
+**Note:** If using ACME/Let's Encrypt, add: `- "traefik.http.routers.workout-frontend.tls.certresolver=cloudflare"`
 
 ### Backend API Labels
 ```yaml
@@ -128,9 +130,10 @@ Traefik (Port 443)
 - "traefik.http.routers.workout-api.rule=Host(`workout.yourdomain.com`) && PathPrefix(`/api`)"
 - "traefik.http.routers.workout-api.entrypoints=https"
 - "traefik.http.routers.workout-api.tls=true"
-- "traefik.http.routers.workout-api.tls.certresolver=cloudflare"
 - "traefik.http.services.workout-api.loadbalancer.server.port=3001"
 ```
+
+**Note:** If using ACME/Let's Encrypt, add: `- "traefik.http.routers.workout-api.tls.certresolver=cloudflare"`
 
 ## Customization
 
@@ -165,8 +168,13 @@ frontend:
 Update in `.env`:
 ```env
 TRAEFIK_ENTRYPOINT=websecure    # If your Traefik uses 'websecure' instead of 'https'
-TRAEFIK_CERTRESOLVER=letsencrypt # If using Let's Encrypt
 ```
+
+If using ACME/Let's Encrypt instead of static certificates, also add to `.env`:
+```env
+TRAEFIK_CERTRESOLVER=letsencrypt
+```
+Then uncomment the certresolver labels in `docker-compose.traefik.yml`.
 
 ## Management Commands
 

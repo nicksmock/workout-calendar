@@ -80,7 +80,6 @@ services:
       - "traefik.http.routers.workout-api.rule=Host(`${DOMAIN:-workout.localhost}`) && PathPrefix(`/api`)"
       - "traefik.http.routers.workout-api.entrypoints=${TRAEFIK_ENTRYPOINT:-https}"
       - "traefik.http.routers.workout-api.tls=true"
-      - "traefik.http.routers.workout-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:-cloudflare}"
       - "traefik.http.services.workout-api.loadbalancer.server.port=3001"
 
   # ============================================================================
@@ -109,7 +108,6 @@ services:
       - "traefik.http.routers.workout-frontend.rule=Host(`${DOMAIN:-workout.localhost}`)"
       - "traefik.http.routers.workout-frontend.entrypoints=${TRAEFIK_ENTRYPOINT:-https}"
       - "traefik.http.routers.workout-frontend.tls=true"
-      - "traefik.http.routers.workout-frontend.tls.certresolver=${TRAEFIK_CERTRESOLVER:-cloudflare}"
       - "traefik.http.services.workout-frontend.loadbalancer.server.port=80"
       # Security headers
       - "traefik.http.middlewares.workout-headers.headers.framedeny=true"
